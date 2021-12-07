@@ -12,23 +12,24 @@ npm install --save use-svg-ssg
 
 ## Usage
 
-This module has been test with `react-static`. It has yet to be tested with other SSG builders.
+**Warning.** This module has been tested with `react-static`. It has yet to be tested with other SSG generators.
+
+**Warning.** Still under development. Not to be used in production.
+
+When building an SSG site, loaded SVG files are written inside the resuling HTML, resulting in a somewhat messy markup. This module aims at minimizing the presence of SVG markup in your HMTL by registering the SVG content inside your bundles and writing simple `<use href="#...">` SVG declarations inside the HTML markup.
 
 First, load the context provider (SvgProvider) in your `App` file:
 
 ```jsx
-import React, { Component } from 'react'
+import React from 'react'
 import { SvgProvider } from 'use-svg-ssg'
 
-
-class Example extends Component {
-  render() {
-    return (
-      <SvgProvider>
-        ...
-      </SvgProvider>
-    )
-  }
+export default function App() {
+  return (
+    <SvgProvider>
+      ...
+    </SvgProvider>
+  )
 }
 ```
 
@@ -61,7 +62,7 @@ export default () => {
 
 ```
 
-You can declare the `SvgCatalog` component anywhere below the `SvgProvider`. Any SVG registered inside the `SvgCatalog` will be made available to the `useSvg()` hook. You can register files globally (in `App.js` for example) and also per page.
+You can declare the `SvgCatalog` component anywhere below the `SvgProvider` in you app tree. Any SVG registered inside the `SvgCatalog` will be made available to the `useSvg()` hook. You can register SVGs globally, per page or even within a component. The SVG declaration will live within the bundle
 
 `useSvg()` returns a JSX component, you can style it as you wish:
 
