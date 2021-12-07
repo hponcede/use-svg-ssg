@@ -1,5 +1,5 @@
 import React, { createContext, useReducer, useContext, useState, useEffect, useRef } from 'react'
-import { createPortal } from "react-dom"
+// import { createPortal } from "react-dom"
 import atob from 'atob'
 // import PropTypes from 'prop-types'
 
@@ -14,15 +14,24 @@ const initialState = {
 }
 
 
+const devLog = (message) => {
+	if (process.env.NODE_ENV !== 'production') {
+		console.log("[SVG WARNING] " + message)
+	}
+}
+
 const extractXml = dataUri => {
 	const data = dataUri.match(/^([a-z]+):([a-z0-9]+\/[a-z0-9+-]+);base64,(.+)/)
-	// const scheme = data[1]
-	// const type = data[2]
-	const encoded = data[3]
 
-	const xml = decodeURIComponent(escape(atob( encoded ))).trim();
+	if (data) {
+		// const scheme = data[1]
+		// const type = data[2]
+		const encoded = data[3]
 
-	return xml
+		return decodeURIComponent(escape(atob( encoded ))).trim();
+	}
+
+	return ""
 }
 
 
@@ -41,19 +50,21 @@ const extractProps = xml => {
 		const reg = new RegExp('\W*?(([^=\W]+="[^"]*")\W*)?', "gms")
 		const chunks = m[1].trim().match(reg)
 
-		chunks.forEach(c => {
-			const [ attribute, ...v] = c.trim().split("=")
+		if (chunks) {
+			chunks.forEach(c => {
+				const [ attribute, ...v] = c.trim().split("=")
 
-			if (!attribute) {
-				return
-			}
+				if (!attribute) {
+					return
+				}
 
-			const valueWithQuotes = v.join('=').trim()
+				const valueWithQuotes = v.join('=').trim()
 
-			const value = valueWithQuotes.substring(1, valueWithQuotes.length - 1)
+				const value = valueWithQuotes.substring(1, valueWithQuotes.length - 1)
 
-			props[ attribute ] = value
-		})
+				props[ attribute ] = value
+			})
+		}
 	}
 
 	return props
@@ -72,7 +83,7 @@ const reducer = (state, action) => {
 				}
 			}
 			else {
-				(process.env.NODE_ENV !== 'production') && console.log(`[SVG WARNING] Asset "${action.payload.id}" already exists. Not added.`)
+				devLog(`Asset "${action.payload.id}" already exists. Not added.`)
 			}
 		return s
 
@@ -99,6 +110,7 @@ const useSvg = (id) => {
 	}, [state.defs[id]])
 
 
+	// TODO: add || typeof document !== 'undefined' to remove entier <svg><use/></svg> markup
 	if (!ready) {
 		return () => null
 	}
@@ -125,18 +137,22 @@ const SvgCatalog = props => {
 
 		children.filter(c => c.props.id).forEach(c => {
 			const xml = extractXml( c.type )
-			const def = extractDef( xml )
-			const svgAttributes = extractProps(xml)
+			if (xml) {
+				const def = extractDef( xml )
+				const svgAttributes = extractProps(xml)
 
-			dispatch({
-				type: 'ADD',
-				payload: {
-					id: c.props.id,
-					def: def,
-					attrs: svgAttributes
-				}
-			})
-
+				dispatch({
+					type: 'ADD',
+					payload: {
+						id: c.props.id,
+						def: def,
+						attrs: svgAttributes
+					}
+				})
+			}
+			else {
+				devLog('Empty XML')
+			}
 		})
 
 
@@ -168,7 +184,7 @@ const SvgPortal = () => {
 		return null
 	}
 	else {
-		return createPortal(
+		return (
 			<div style={{display: 'none'}}
 				className="svg-catalog-portal"
 				ref={portalNode}
@@ -180,8 +196,8 @@ const SvgPortal = () => {
 						}}/>)}
 					</defs>
 				</svg>
-			</div>,
-			document.body)
+			</div>
+		)
 	}
 
 }
@@ -192,7 +208,6 @@ const SvgProvider = props => {
 	return (
 		<Context.Provider value={{ state, dispatch }}>
 			{props.children}
-
 			<SvgPortal/>
 		</Context.Provider>
 	)
