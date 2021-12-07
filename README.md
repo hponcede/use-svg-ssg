@@ -16,7 +16,7 @@ npm install --save use-svg-ssg
 
 **Warning.** Still under development. Not to be used in production.
 
-When building an SSG site, loaded SVG files are written inside the resuling HTML, resulting in a somewhat messy markup. This module aims at minimizing the presence of SVG markup in your HMTL by registering the SVG content inside your bundles and writing simple `<use href="#...">` SVG declarations inside the HTML markup.
+When building an SSG site, loaded SVG files are written inside the resuling HTML, resulting in a somewhat messy markup. This module aims at minimizing the presence of SVG markup in your HMTL by registering the SVG content inside your bundles and writing simple `<use href="#..."/>` SVG declarations inside the HTML markup.
 
 First, load the context provider (SvgProvider) in your `App` file:
 

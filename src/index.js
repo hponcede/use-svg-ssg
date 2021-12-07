@@ -114,10 +114,16 @@ const useSvg = (id) => {
 
 const SvgCatalog = props => {
 
-	const { state, dispatch } = useContext(Context)
+	const { dispatch } = useContext(Context)
 
 	useEffect(() => {
-		props.children.filter(c => c.props.id).forEach(c => {
+		let children = props.children
+
+		if (typeof props.children.filter === 'undefined') {
+			children = [props.children]
+		}
+
+		children.filter(c => c.props.id).forEach(c => {
 			const xml = extractXml( c.type )
 			const def = extractDef( xml )
 			const svgAttributes = extractProps(xml)
