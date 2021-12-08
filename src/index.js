@@ -1,8 +1,6 @@
 import React, { createContext, useReducer, useContext, useState, useEffect, useRef } from 'react'
-// import { createPortal } from "react-dom"
 import atob from 'atob'
-// import PropTypes from 'prop-types'
-
+import { renderToStaticMarkup } from 'react-dom/server'
 
 export { SvgProvider, useSvg, SvgCatalog }
 
@@ -16,11 +14,11 @@ const initialState = {
 
 const devLog = (message) => {
 	if (process.env.NODE_ENV !== 'production') {
-		console.log("[SVG WARNING] " + message)
+		console.log("[SVG] " + message)
 	}
 }
 
-const extractXml = dataUri => {
+const extractXmlFromDataUri = dataUri => {
 	const data = dataUri.match(/^([a-z]+):([a-z0-9]+\/[a-z0-9+-]+);base64,(.+)/)
 
 	if (data) {
@@ -35,14 +33,14 @@ const extractXml = dataUri => {
 }
 
 
-const extractDef = xml => {
+const extractDefFromXml = xml => {
 	const m = xml.match(/<svg[^>]+>(.+)<\/svg>/s)
 
 	return m ? m[1].trim() : ""
 }
 
 
-const extractProps = xml => {
+const extractPropsFromXml = xml => {
 	const m = xml.match(/<svg([^>]+)>/s)
 	const props = {}
 
@@ -109,9 +107,7 @@ const useSvg = (id) => {
 		}
 	}, [state.defs[id]])
 
-
-	// TODO: add || typeof document !== 'undefined' to remove entier <svg><use/></svg> markup
-	if (!ready) {
+	if (!ready || typeof document === 'undefined') {
 		return () => null
 	}
 	else {
@@ -122,6 +118,7 @@ const useSvg = (id) => {
 		)
 	}
 }
+
 
 
 const SvgCatalog = props => {
@@ -136,11 +133,37 @@ const SvgCatalog = props => {
 		}
 
 		children.filter(c => c.props.id).forEach(c => {
-			const xml = extractXml( c.type )
-			if (xml) {
-				const def = extractDef( xml )
-				const svgAttributes = extractProps(xml)
+			let def = ""
+			let svgAttributes = {}
+			let xml = ""
 
+			switch (typeof c.type) {
+
+				case 'string':
+					xml = extractXmlFromDataUri( c.type )
+					if (xml) {
+						def = extractDefFromXml( xml )
+						svgAttributes = extractPropsFromXml(xml)
+					}
+				break
+
+				case 'function':
+					const str = renderToStaticMarkup(<c.type {...c.props}/>)
+					if (str) {
+						def = extractDefFromXml( str )
+					}
+
+					if ("defaultProps" in c.type && typeof c.type.defaultProps === 'object') {
+						svgAttributes = c.type.defaultProps
+					}
+				break
+
+				default:
+					devLog('Unsupported Type for #' + c.props.id)
+			}
+
+
+			if (def) {
 				dispatch({
 					type: 'ADD',
 					payload: {
@@ -151,10 +174,9 @@ const SvgCatalog = props => {
 				})
 			}
 			else {
-				devLog('Empty XML')
+				devLog('No def retrieved from SVG #' + c.props.id)
 			}
 		})
-
 
 		dispatch({
 			type: 'LOADED'
@@ -201,6 +223,7 @@ const SvgPortal = () => {
 	}
 
 }
+
 
 const SvgProvider = props => {
 	const [ state, dispatch ] = useReducer( reducer, initialState )
